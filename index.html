@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TALAROOG | تصفح وتحميل الأفلام</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="description" content="TALAROOG - موقع لتصفح وتحميل أحدث الأفلام بجودة عالية مع واجهة مستخدم سهلة وتصميم متجاوب">
+    <meta name="theme-color" content="#8A2BE2">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="images/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="images/icon-512x512.png">
+    <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+</head>
+<body>
+    <!-- الهيدر -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">TALAROOG</div>
+                <div class="search-container">
+                    <form class="search-bar" id="search-form">
+                        <div class="search-input-container">
+                            <input type="text" id="search-input" placeholder="Search for a movie..." dir="ltr">
+                            <button type="button" id="clear-search-button" class="clear-search-button" style="display: none;">&times;</button>
+                        </div>
+                        <button type="submit" id="search-button"><i class="fas fa-search"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- قسم الفرز والتصنيفات -->
+    <section class="filter-sort-section">
+        <div class="container">
+            <div class="filter-sort-container">
+                <div class="sort-dropdown">
+                    <button type="button" id="sort-button"><i class="fas fa-sort"></i></button>
+                    <div class="sort-dropdown-content" id="sort-dropdown-content">
+                        <div class="sort-section">
+                            <div class="sort-section-title">الترتيب:</div>
+                            <div class="sort-option" data-value="date_added">الأحدث</div>
+                            <div class="sort-option" data-value="title">العنوان</div>
+                            <div class="sort-option" data-value="year">السنة</div>
+                            <div class="sort-option" data-value="rating">التقييم</div>
+                        </div>
+                        <div class="sort-direction">
+                            <span>الاتجاه:</span>
+                            <label>
+                                <input type="radio" name="sort-direction" value="desc" checked> تنازلي
+                            </label>
+                            <label>
+                                <input type="radio" name="sort-direction" value="asc"> تصاعدي
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="genres-container">
+                    <div class="genre-tag active" data-value="">الكل</div>
+                    <div class="genre-tag" data-value="action">أكشن</div>
+                    <div class="genre-tag" data-value="adventure">مغامرة</div>
+                    <div class="genre-tag" data-value="animation">رسوم</div>
+                    <div class="genre-tag" data-value="comedy">كوميديا</div>
+                    <div class="genre-tag" data-value="crime">جريمة</div>
+                    <div class="genre-tag" data-value="drama">دراما</div>
+                    <div class="genre-tag" data-value="fantasy">خيال</div>
+                    <div class="genre-tag" data-value="horror">رعب</div>
+                    <div class="genre-tag" data-value="romance">رومانسي</div>
+                    <div class="genre-tag" data-value="sci-fi">خيال علمي</div>
+                    <div class="genre-tag" data-value="thriller">إثارة</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- قسم الفلترة - مخفي مع الاحتفاظ بالحقول المخفية للتوافق مع الكود -->
+    <section class="filters" style="display: none;">
+        <div class="container">
+            <form id="filter-form" class="filter-options">
+                <input type="hidden" id="genre-filter" value="">
+                <input type="hidden" id="rating-filter" value="0">
+                <input type="hidden" id="sort-filter" value="date_added">
+                <input type="hidden" id="order-filter" value="desc">
+            </form>
+        </div>
+    </section>
+
+    <!-- قسم عرض الأفلام -->
+    <main class="container">
+        <!-- حالة التحميل -->
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- شبكة الأفلام -->
+        <div id="movies-grid" class="movies-grid"></div>
+
+        <!-- أزرار التنقل بين الصفحات -->
+        <div id="pagination" class="pagination"></div>
+    </main>
+    
+    <!-- قسم تفاصيل الفيلم -->
+    <div id="movie-details" class="movie-details"></div>
+    
+    <!-- قسم تحميلات WebTorrent -->
+    <div id="webtorrent-downloads" class="webtorrent-downloads"></div>
+
+    <!-- نافذة عرض البوستر بحجم كبير -->
+    <div id="poster-modal" class="poster-modal">
+        <div class="poster-modal-content">
+            <button class="close-poster-modal">&times;</button>
+            <img class="poster-modal-image" id="poster-modal-image" src="" alt="صورة الفيلم">
+        </div>
+    </div>
+
+    <!-- قسم الإشعارات -->
+    <div id="notification" class="notification">
+        <div class="notification-icon"></div>
+        <div class="notification-message"></div>
+    </div>
+
+    <!-- نافذة منبثقة للبحث بالمحتوى المشارك -->
+    <div id="share-popup" class="share-popup">
+        <div class="share-popup-content">
+            <button id="popup-close-button" class="popup-close-button">&times;</button>
+            <p id="popup-shared-text"></p>
+            <div class="popup-buttons">
+                <button id="popup-search-button" class="popup-action-button">بحث</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- الفوتر -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">TALAROOG</div>
+                <p class="footer-text">TALAROOG - تصفح وحمل أحدث الأفلام</p>
+                <p class="footer-text footer-disclaimer">إخلاء المسؤولية عن المحتوى</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- سكريبت جافاسكريبت -->
+    <script src="script.js"></script>
+</body>
+</html>
