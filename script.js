@@ -1,6 +1,6 @@
 // ثوابت التطبيق
 const API_BASE_URL = 'https://yts.bz/api/v2/';
-const CORS_PROXY_URL = 'https://corsproxy.io/?';
+const CORS_PROXY_URL = ''; // تم إزالة البروكسي لأنه يسبب أخطاء 403 حالياً
 const DEFAULT_LIMIT = 20;
 
 // متغيرات عامة
@@ -353,22 +353,23 @@ async function loadMovies(options = {}) {
     }
     
     // إجراء طلب API
-    const response = await fetch(`${CORS_PROXY_URL}${API_BASE_URL}list_movies.json?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}list_movies.json?${params.toString()}`);
     const data = await response.json();
     
-    if (data.status === 'ok' && data.data.movies) {
+    if (data.status === 'ok' && data.data.movies && data.data.movies.length > 0) {
       currentMovies = data.data.movies;
       totalMovies = data.data.movie_count;
       totalPages = Math.ceil(totalMovies / DEFAULT_LIMIT);
       
       renderMovies(currentMovies);
       renderPagination();
-      
-      // تم حذف إشعار النجاح هنا لتجنب ظهور الرسالة المنبثقة عند كل تحديث
     } else {
+      currentMovies = [];
       renderMovies([]);
       renderPagination();
-      // تم إزالة إشعار فشل البحث هنا بناءً على طلب المستخدم
+      if (options.query) {
+        showNotification('error', 'No movies found for your search.');
+      }
     }
   } catch (error) {
     console.error('خطأ في تحميل الأفلام:', error);
@@ -719,7 +720,7 @@ async function getMovieDetails(movieId) {
       with_cast: true
     });
     
-    const response = await fetch(`${CORS_PROXY_URL}${API_BASE_URL}movie_details.json?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}movie_details.json?${params.toString()}`);
     const data = await response.json();
     
     if (data.status === 'ok' && data.data.movie) {

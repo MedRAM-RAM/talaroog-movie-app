@@ -116,7 +116,7 @@ header {
   outline: none;
 }
 
-.search-bar button {
+.search-bar button#search-button {
   background: var(--primary-color);
   color: white;
   width: 45px;
@@ -126,6 +126,7 @@ header {
   align-items: center;
   justify-content: center;
   transition: var(--transition);
+  margin-right: 5px;
 }
 
 .search-bar button:hover {
@@ -135,13 +136,14 @@ header {
 
 .clear-search-button {
   position: absolute;
-  left: 60px;
+  right: 15px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   color: var(--text-dim);
   font-size: 1.2rem;
   display: none;
+  z-index: 10;
 }
 
 /* الفلترة والفرز */
