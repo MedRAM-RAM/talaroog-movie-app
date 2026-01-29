@@ -1,5 +1,5 @@
 // ثوابت التطبيق
-const API_BASE_URL = 'https://yts.lt/api/v2/';
+const API_BASE_URL = 'https://yts.bz/api/v2/';
 const CORS_PROXY_URL = 'https://corsproxy.io/?';
 const DEFAULT_LIMIT = 20;
 
@@ -413,7 +413,7 @@ function createMovieCard(movie) {
   card.innerHTML = `
     <div class="movie-poster">
       <img src="${movie.medium_cover_image || createDefaultPosterImage()}" alt="${movie.title}" loading="lazy" onerror="this.src='${createDefaultPosterImage()}'">
-      ${movie.rating ? `<div class="movie-rating">${movie.rating}</div>` : ''}
+      <div class="movie-rating"><i class="fas fa-star"></i> ${movie.rating || '0.0'}</div>
       <div class="poster-buttons" style="display: none;">
         <button class="poster-button details-button"><i class="fas fa-info-circle"></i> تفاصيل</button>
         <button class="poster-button download-button"><i class="fas fa-download"></i> تحميل</button>
@@ -579,43 +579,84 @@ async function openMovieDetails(movieId, showDownloadOptions = false) {
       
       movieDetailsElement.innerHTML = html;
     } else {
-      // عرض تفاصيل الفيلم فقط (بدون خيارات التحميل)
+      // عرض تفاصيل الفيلم بالكامل
       let html = `
         <button class="close-details">&times;</button>
         <div class="details-container">
           <div class="details-header">
-            <img class="details-backdrop" src="${movieData.background_image || movieData.large_cover_image}" alt="${movieData.title}" onerror="this.src='${createDefaultPosterImage()}'">
-            <img class="details-poster" src="${movieData.large_cover_image}" alt="${movieData.title}" onerror="this.src='${createDefaultPosterImage()}'">
-            <div class="details-title">
-              <h1>${movieData.title} (${movieData.year})</h1>
-              <div class="details-meta">
-                <span>${movieData.runtime} دقيقة</span>
-                <span>${movieData.genres ? movieData.genres.join(', ') : ''}</span>
-                <span>التقييم: ${movieData.rating}/10</span>
+            <img class="details-backdrop" src="${movieData.background_image_original || movieData.background_image || movieData.large_cover_image}" alt="${movieData.title}" onerror="this.src='${createDefaultPosterImage()}'">
+            <div class="details-header-content">
+              <img class="details-poster" src="${movieData.large_cover_image}" alt="${movieData.title}" onerror="this.src='${createDefaultPosterImage()}'">
+              <div class="details-title">
+                <h1>${movieData.title}</h1>
+                <div class="details-meta">
+                  <span class="meta-item"><i class="far fa-calendar-alt"></i> ${movieData.year}</span>
+                  <span class="meta-item"><i class="far fa-clock"></i> ${movieData.runtime} دقيقة</span>
+                  <span class="meta-item"><i class="fas fa-star"></i> ${movieData.rating}/10</span>
+                  <span class="meta-item"><i class="fas fa-language"></i> ${movieData.language.toUpperCase()}</span>
+                </div>
+                <div class="details-genres">
+                  ${movieData.genres ? movieData.genres.map(genre => `<span class="genre-badge">${genre}</span>`).join('') : ''}
+                </div>
               </div>
             </div>
           </div>
           
           <div class="details-content">
-            <div class="details-info">
-              <div class="details-summary">
-                <h3>ملخص</h3>
-                <p>${movieData.description_full || 'لا يوجد وصف متاح.'}</p>
+            <div class="details-main">
+              <div class="details-section">
+                <h3><i class="fas fa-align-right"></i> قصة الفيلم</h3>
+                <p class="summary-text">${movieData.description_full || 'لا يوجد وصف متاح لهذا الفيلم حالياً.'}</p>
               </div>
               
               ${movieData.cast && movieData.cast.length > 0 ? `
-                <div class="details-cast">
-                  <h3>طاقم التمثيل</h3>
+                <div class="details-section">
+                  <h3><i class="fas fa-users"></i> طاقم التمثيل</h3>
                   <div class="cast-list">
-                    ${movieData.cast.slice(0, 6).map(actor => `
+                    ${movieData.cast.slice(0, 8).map(actor => `
                       <div class="cast-item">
-                        <img class="cast-photo" src="${actor.url_small_image || 'img/no-profile.jpg'}" alt="${actor.name}" onerror="this.src='${createDefaultProfileImage()}'">
-                        <div class="cast-name">${actor.name}</div>
+                        <div class="cast-photo-container">
+                          <img class="cast-photo" src="${actor.url_small_image || ''}" alt="${actor.name}" onerror="this.src='${createDefaultProfileImage()}'">
+                        </div>
+                        <div class="cast-info">
+                          <div class="cast-name">${actor.name}</div>
+                          <div class="cast-character">${actor.character_name || ''}</div>
+                        </div>
                       </div>
                     `).join('')}
                   </div>
                 </div>
               ` : ''}
+            </div>
+            
+            <div class="details-sidebar">
+              <div class="details-section">
+                <h3><i class="fas fa-download"></i> روابط التحميل</h3>
+                <div class="download-list">
+                  ${movieData.torrents && movieData.torrents.length > 0 ? movieData.torrents.map(torrent => `
+                    <div class="download-card">
+                      <div class="download-info">
+                        <span class="quality-tag">${torrent.quality}</span>
+                        <span class="type-tag">${torrent.type}</span>
+                        <span class="size-tag"><i class="fas fa-file-download"></i> ${torrent.size}</span>
+                      </div>
+                      <div class="download-actions">
+                        <a href="${torrent.url}" class="action-btn torrent-btn" title="تحميل ملف التورنت"><i class="fas fa-file-alt"></i></a>
+                        <a href="magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(`${movieData.title} ${movieData.year} ${torrent.quality} ${torrent.type}`)}" class="action-btn magnet-btn" title="رابط مغناطيسي"><i class="fas fa-magnet"></i> تحميل</a>
+                      </div>
+                    </div>
+                  `).join('') : '<p>لا توجد روابط متاحة.</p>'}
+                </div>
+              </div>
+              
+              <div class="details-section">
+                <h3><i class="fas fa-info-circle"></i> معلومات إضافية</h3>
+                <ul class="extra-info-list">
+                  <li><strong>تاريخ الرفع:</strong> ${new Date(movieData.date_uploaded).toLocaleDateString('ar-EG')}</li>
+                  <li><strong>عدد مرات الإعجاب:</strong> ${movieData.like_count || 0}</li>
+                  <li><strong>MPAA:</strong> ${movieData.mpa_rating || 'N/A'}</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ self.addEventListener('activate', event => {
 // استراتيجية الشبكة أولاً، ثم ذاكرة التخزين المؤقت
 self.addEventListener('fetch', event => {
   // تجاهل طلبات API
-  if (event.request.url.includes('/api/') || event.request.url.includes('yts.lt')) {
+  if (event.request.url.includes('/api/') || event.request.url.includes('yts.bz')) {
     return;
   }
 
