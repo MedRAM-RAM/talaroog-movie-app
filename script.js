@@ -16,11 +16,6 @@ let currentRatingValue = '0';
 
 // تهيئة التطبيق عند تحميل الصفحة
 document.addEventListener("DOMContentLoaded", () => {
-  // تهيئة WebTorrent client
-  if (typeof WebTorrent !== "undefined") {
-    client = new WebTorrent();
-  }
-
   // تسجيل مستمعي الأحداث
   registerEventListeners();
 
@@ -29,105 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // تسجيل Service Worker لدعم PWA
   registerServiceWorker();
-  
-  // التحقق من وجود بيانات مشاركة وعرض النافذة المنبثقة إذا لزم الأمر
-  checkForSharedDataAndShowPopup(); 
 });
 
-/**
- * التحقق من وجود بيانات مشاركة في الـ URL وعرض النافذة المنبثقة.
- * يحدد مصطلح البحث حسب الأولوية: IMDb ID > العنوان الخام > عنوان Trakt > النص/الرابط المدمج.
- */
-function checkForSharedDataAndShowPopup() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const sharedTitle = urlParams.get("title")?.trim() || null;
-  const sharedText = urlParams.get("text")?.trim() || null;
-  const sharedUrl = urlParams.get("url")?.trim() || null;
 
-  let finalSearchTerm = null;
-  let extractedImdbId = null;
-  let extractedTraktTitle = null;
-
-  // 1. البحث عن IMDb ID في جميع البيانات المشتركة
-  const combinedSharedData = [sharedTitle, sharedText, sharedUrl].filter(Boolean).join(' ');
-  const imdbRegex = /tt\d{7,}/;
-  const imdbMatch = combinedSharedData.match(imdbRegex);
-  if (imdbMatch) {
-    extractedImdbId = imdbMatch[0];
-    finalSearchTerm = extractedImdbId;
-    console.log('[Share Target] Found IMDb ID:', finalSearchTerm);
-  }
-
-  // 2. إذا لم يتم العثور على IMDb ID، استخدم العنوان الخام (title)
-  if (!finalSearchTerm && sharedTitle) {
-    finalSearchTerm = sharedTitle;
-    console.log('[Share Target] Using raw title:', finalSearchTerm);
-  }
-
-  // 3. إذا لم يتم العثور على IMDb ID أو عنوان خام، حاول استخراج عنوان Trakt
-  if (!finalSearchTerm && sharedUrl && sharedUrl.includes("trakt.tv/")) {
-    try {
-      const urlObject = new URL(sharedUrl);
-      const pathParts = urlObject.pathname.split('/').filter(part => part !== ""); // Split path and remove empty parts
-
-      // التحقق من بنية الرابط (أفلام أو مسلسلات)
-      if ((pathParts[0] === 'movies' || pathParts[0] === 'shows') && pathParts.length >= 2) {
-        let titleFromTrakt = pathParts[1];
-        // أولاً، استبدل الشرطات بمسافات
-        titleFromTrakt = titleFromTrakt.replace(/-/g, ' ');
-        // ثم، قم بإزالة السنة من النهاية (إذا كانت موجودة ومسبوقة بمسافة)
-        titleFromTrakt = titleFromTrakt.replace(/ \d{4}$/, ''); 
-        // تحويل الحرف الأول من كل كلمة إلى كبير
-        titleFromTrakt = titleFromTrakt.replace(/\b\w/g, l => l.toUpperCase());
-        extractedTraktTitle = titleFromTrakt.trim(); // إزالة أي مسافات زائدة
-        finalSearchTerm = extractedTraktTitle;
-        console.log("[Share Target] Extracted Trakt title (v2):", finalSearchTerm);
-      }
-    } catch (e) {
-      console.error("[Share Target] Error parsing Trakt URL:", e);
-    }
-  }
-
-  // 4. إذا لم يتم العثور على أي مما سبق، استخدم النص أو الرابط المدمج
-  if (!finalSearchTerm) {
-    const fallbackTerm = [sharedText, sharedUrl].filter(Boolean).join(" ").trim();
-    if (fallbackTerm) {
-        finalSearchTerm = fallbackTerm;
-        console.log("[Share Target] Using combined text/URL fallback:", finalSearchTerm);
-    }
-  }
-
-  if (finalSearchTerm) {
-    showSharePopup(finalSearchTerm);
-  }
-}
-
-/**
- * إظهار النافذة المنبثقة مع البيانات المشتركة.
- * @param {string} data - البيانات المدمجة المراد عرضها.
- */
-function showSharePopup(data) {
-  const sharePopup = document.getElementById("share-popup");
-  const popupTextElement = document.getElementById("popup-shared-text");
-  
-  if (sharePopup && popupTextElement) {
-    popupTextElement.textContent = data;
-    sharePopup.style.display = "flex"; // Use flex to center content vertically/horizontally
-  } else {
-    console.error("Popup elements not found!");
-  }
-}
-
-/**
- * إخفاء النافذة المنبثقة.
- */
-function hideSharePopup() {
-  const sharePopup = document.getElementById("share-popup");
-  if (sharePopup) {
-    sharePopup.style.display = "none";
-  }
-  // لا تقم بإزالة باراميترات الـ URL هنا، بل عند تأكيد البحث
-}
 
 /**
  * تسجيل مستمعي الأحداث للعناصر التفاعلية
@@ -267,8 +166,6 @@ function registerEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeMovieDetails();
-      closePosterModal();
-      hideSharePopup(); // أغلق النافذة المنبثقة أيضاً
       
       // إغلاق قائمة الفرز المنسدلة
       if (sortDropdownContent.classList.contains('active')) {
@@ -276,43 +173,7 @@ function registerEventListeners() {
       }
     }
   });
-
-  // --- مستمعات أحداث النافذة المنبثقة --- 
-  const popupCloseButton = document.getElementById("popup-close-button");
-  const popupSearchButton = document.getElementById("popup-search-button");
-  const popupTextElement = document.getElementById("popup-shared-text");
-
-  if (popupCloseButton) {
-    popupCloseButton.addEventListener("click", hideSharePopup);
-  }
-  if (popupSearchButton && popupTextElement && searchInput) {
-    popupSearchButton.addEventListener("click", () => {
-      const query = popupTextElement.textContent;
-      if (query) {
-        // ضع النص في مربع البحث الرئيسي
-        searchInput.value = query;
-        
-        // استخدم نفس منطق البحث الرئيسي تماماً
-        const searchButton = document.getElementById('search-button');
-        if (searchButton) {
-          // محاكاة الضغط على زر البحث الرئيسي
-          searchButton.click();
-        } else {
-          // احتياطي في حالة عدم وجود زر البحث
-          currentPage = 1;
-          loadMovies({ query });
-        }
-        
-        // أغلق النافذة المنبثقة
-        hideSharePopup();
-        
-        // إزالة باراميترات المشاركة من الـ URL الآن بعد تأكيد البحث
-        try {
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
-        } catch (e) {
-          console.error("Error cleaning URL parameters after popup search:", e);
-        }
+}
       }
     });
   }
@@ -734,33 +595,7 @@ async function getMovieDetails(movieId) {
   }
 }
 
-/**
- * فتح نافذة عرض البوستر بحجم كبير
- * @param {Object} movie - بيانات الفيلم
- */
-function openPosterModal(movie) {
-  const posterModal = document.getElementById('poster-modal');
-  const posterImage = document.getElementById('poster-modal-image');
-  
-  posterImage.src = movie.large_cover_image || movie.medium_cover_image;
-  posterImage.alt = movie.title;
-  
-  posterModal.classList.add('active');
-  document.body.style.overflow = 'hidden';
-  
-  // إضافة مستمع لزر الإغلاق
-  const closeButton = posterModal.querySelector('.close-poster-modal');
-  closeButton.addEventListener('click', closePosterModal);
-}
 
-/**
- * إغلاق نافذة عرض البوستر
- */
-function closePosterModal() {
-  const posterModal = document.getElementById('poster-modal');
-  posterModal.classList.remove('active');
-  document.body.style.overflow = '';
-}
 
 /**
  * إنشاء صورة افتراضية للبوستر

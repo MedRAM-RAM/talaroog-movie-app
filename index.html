@@ -77,17 +77,13 @@
         </div>
     </section>
     
-    <!-- قسم الفلترة - مخفي مع الاحتفاظ بالحقول المخفية للتوافق مع الكود -->
-    <section class="filters" style="display: none;">
-        <div class="container">
-            <form id="filter-form" class="filter-options">
-                <input type="hidden" id="genre-filter" value="">
-                <input type="hidden" id="rating-filter" value="0">
-                <input type="hidden" id="sort-filter" value="date_added">
-                <input type="hidden" id="order-filter" value="desc">
-            </form>
-        </div>
-    </section>
+    <!-- الحقول المخفية للتوافق مع الكود البرمجي -->
+    <form id="filter-form" style="display: none;">
+        <input type="hidden" id="genre-filter" value="">
+        <input type="hidden" id="rating-filter" value="0">
+        <input type="hidden" id="sort-filter" value="date_added">
+        <input type="hidden" id="order-filter" value="desc">
+    </form>
 
     <!-- قسم عرض الأفلام -->
     <main class="container">
@@ -106,32 +102,10 @@
     <!-- قسم تفاصيل الفيلم -->
     <div id="movie-details" class="movie-details"></div>
     
-    <!-- قسم تحميلات WebTorrent -->
-    <div id="webtorrent-downloads" class="webtorrent-downloads"></div>
-
-    <!-- نافذة عرض البوستر بحجم كبير -->
-    <div id="poster-modal" class="poster-modal">
-        <div class="poster-modal-content">
-            <button class="close-poster-modal">&times;</button>
-            <img class="poster-modal-image" id="poster-modal-image" src="" alt="صورة الفيلم">
-        </div>
-    </div>
-
     <!-- قسم الإشعارات -->
     <div id="notification" class="notification">
         <div class="notification-icon"></div>
         <div class="notification-message"></div>
-    </div>
-
-    <!-- نافذة منبثقة للبحث بالمحتوى المشارك -->
-    <div id="share-popup" class="share-popup">
-        <div class="share-popup-content">
-            <button id="popup-close-button" class="popup-close-button">&times;</button>
-            <p id="popup-shared-text"></p>
-            <div class="popup-buttons">
-                <button id="popup-search-button" class="popup-action-button">بحث</button>
-            </div>
-        </div>
     </div>
 
     <!-- الفوتر -->
