@@ -308,6 +308,9 @@ async function openMovieDetails(movieId, showDownloadOnly = false) {
             <div class="details-genres">
               ${movie.genres ? movie.genres.map(g => `<span class="genre-badge">${g}</span>`).join('') : ''}
             </div>
+            <div class="details-actions">
+              ${movie.imdb_code ? `<a href="https://www.imdb.com/title/${movie.imdb_code}" target="_blank" class="imdb-link-btn"><i class="fab fa-imdb"></i> View on IMDb</a>` : ''}
+            </div>
           </div>
         </div>
       </div>
