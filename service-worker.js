@@ -1,13 +1,13 @@
 // Service Worker لدعم PWA
-const CACHE_NAME = 'talaroog-cache-v1';
+const CACHE_NAME = 'talaroog-cache-v2';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/script.js',
-  '/manifest.json',
-  '/images/icon-192x192.png',
-  '/images/icon-512x512.png'
+  './',
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './images/icon-192x192.png',
+  './images/icon-512x512.png'
 ];
 
 // تثبيت Service Worker وتخزين الملفات الأساسية
@@ -15,7 +15,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('تم فتح ذاكرة التخزين المؤقت');
+        console.log('Cache opened');
         return cache.addAll(ASSETS_TO_CACHE);
       })
       .then(() => self.skipWaiting())
@@ -39,56 +39,40 @@ self.addEventListener('activate', event => {
 
 // استراتيجية الشبكة أولاً، ثم ذاكرة التخزين المؤقت
 self.addEventListener('fetch', event => {
-  // تجاهل طلبات API
-  if (event.request.url.includes('/api/') || event.request.url.includes('yts.bz')) {
+  const url = new URL(event.request.url);
+  
+  // تجاهل طلبات API والطلبات الخارجية
+  if (url.origin !== self.location.origin || url.pathname.includes('/api/')) {
+    return;
+  }
+
+  // معالجة طلبات المشاركة (Share Target)
+  // بما أننا نستخدم GET، سيقوم المتصفح بتحميل index.html مع الباراميترات
+  // السكريبت الرئيسي (script.js) سيتولى قراءة هذه الباراميترات
+  if (event.request.method === 'GET' && (url.searchParams.has('title') || url.searchParams.has('text') || url.searchParams.has('url'))) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html'))
+    );
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // نسخ الاستجابة
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
         const responseClone = response.clone();
-        
-        // فتح ذاكرة التخزين المؤقت وتخزين الاستجابة
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            cache.put(event.request, responseClone);
-          });
-          
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseClone);
+        });
         return response;
       })
-      .catch(() => {
-        // إذا فشل الطلب، استخدم ذاكرة التخزين المؤقت
-        return caches.match(event.request)
-          .then(response => {
-            if (response) {
-              return response;
-            }
-            
-            // إذا كان الطلب لصفحة HTML، قم بإرجاع الصفحة الرئيسية
-            if (event.request.headers.get('accept').includes('text/html')) {
-              return caches.match('/index.html');
-            }
-          });
-      })
+      .catch(() => caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse;
+        if (event.request.headers.get('accept').includes('text/html')) {
+          return caches.match('./index.html');
+        }
+      }))
   );
-});
-
-// معالجة مشاركة الروابط من التطبيقات الأخرى
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  
-  // التحقق مما إذا كان الطلب من مشاركة
-  if (url.searchParams.has('text') || url.searchParams.has('url') || url.searchParams.has('title')) {
-    // إرسال رسالة إلى التطبيق بالرابط المشارك
-    self.clients.matchAll().then(clients => {
-      clients.forEach(client => {
-        client.postMessage({
-          type: 'SHARE_TARGET_URL',
-          url: url.searchParams.get('text') || url.searchParams.get('url') || url.searchParams.get('title')
-        });
-      });
-    });
-  }
 });

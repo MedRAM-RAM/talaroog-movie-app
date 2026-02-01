@@ -17,12 +17,50 @@ document.addEventListener("DOMContentLoaded", () => {
   // تسجيل مستمعي الأحداث
   registerEventListeners();
 
-  // تحميل الأفلام الافتراضية
-  loadMovies();
+  // التحقق من وجود بيانات مشاركة (Share Target)
+  const sharedQuery = checkForSharedData();
+  
+  if (sharedQuery) {
+    // إذا وجدنا معرف IMDb أو نص بحث، نقوم بالبحث عنه مباشرة
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = sharedQuery;
+    loadMovies({ query: sharedQuery });
+    
+    // تنظيف الـ URL من باراميترات المشاركة
+    const newUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, newUrl);
+  } else {
+    // تحميل الأفلام الافتراضية إذا لم يكن هناك بحث
+    loadMovies();
+  }
 
   // تسجيل Service Worker لدعم PWA
   registerServiceWorker();
 });
+
+/**
+ * التحقق من وجود بيانات مشاركة في الـ URL واستخراج معرف IMDb أو نص البحث.
+ */
+function checkForSharedData() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const title = urlParams.get('title');
+  const text = urlParams.get('text');
+  const url = urlParams.get('url');
+  
+  const combinedData = [title, text, url].filter(Boolean).join(' ');
+  
+  if (!combinedData) return null;
+  
+  // محاولة استخراج IMDb ID (tt followed by at least 7 digits)
+  const imdbMatch = combinedData.match(/tt\d{7,}/);
+  if (imdbMatch) {
+    console.log('Found IMDb ID in shared data:', imdbMatch[0]);
+    return imdbMatch[0];
+  }
+  
+  // إذا لم نجد IMDb ID، نستخدم النص المتوفر كبحث عام
+  return title || text || url;
+}
 
 /**
  * تسجيل مستمعي الأحداث للعناصر التفاعلية
