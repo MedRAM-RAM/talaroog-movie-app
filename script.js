@@ -252,17 +252,18 @@ async function openMovieDetails(movieId) {
     const data = await response.json();
     const movie = data.data.movie;
     
-    // جلب بيانات إضافية من imdbapi.dev إذا توفر معرف IMDb
-    let imdbData = null;
+    // جلب بيانات إضافية من OMDb API إذا توفر معرف IMDb
+    let omdbData = null;
     if (movie.imdb_code) {
       try {
-        const imdbResponse = await fetch(`https://api.imdbapi.dev/titles/${movie.imdb_code}`);
-        if (imdbResponse.ok) {
-          imdbData = await imdbResponse.json();
-          console.log('IMDb Data fetched:', imdbData);
+        const omdbResponse = await fetch(`https://www.omdbapi.com/?i=${movie.imdb_code}&apikey=9b8d2c00&plot=full`);
+        if (omdbResponse.ok) {
+          omdbData = await omdbResponse.json();
+          if (omdbData.Response === "False") omdbData = null;
+          console.log('OMDb Data fetched:', omdbData);
         }
       } catch (e) {
-        console.error('Failed to fetch from imdbapi.dev:', e);
+        console.error('Failed to fetch from OMDb API:', e);
       }
     }
     
@@ -280,7 +281,8 @@ async function openMovieDetails(movieId) {
               <span><i class="far fa-calendar-alt"></i> ${movie.year}</span>
               <span><i class="far fa-clock"></i> ${movie.runtime} min</span>
               <span><i class="fas fa-star"></i> ${movie.rating}/10</span>
-              ${imdbData && imdbData.rating ? `<span><i class="fab fa-imdb" style="color: #f5c518;"></i> ${imdbData.rating.aggregateRating}/10 (${imdbData.rating.voteCount.toLocaleString()} votes)</span>` : ''}
+              ${omdbData && omdbData.imdbRating ? `<span><i class="fab fa-imdb" style="color: #f5c518;"></i> ${omdbData.imdbRating}/10 (${omdbData.imdbVotes} votes)</span>` : ''}
+              ${omdbData && omdbData.Metascore && omdbData.Metascore !== "N/A" ? `<span><i class="fas fa-chart-line" style="color: #66cc33;"></i> Metascore: ${omdbData.Metascore}</span>` : ''}
             </div>
             <div class="details-genres">
               ${movie.genres ? movie.genres.map(g => `<span class="genre-badge">${g}</span>`).join('') : ''}
@@ -295,14 +297,18 @@ async function openMovieDetails(movieId) {
         <div class="details-main">
           <div class="details-section">
             <h3>Storyline</h3>
-            <p>${imdbData && imdbData.plot ? imdbData.plot : (movie.description_full || 'No description available.')}</p>
+            <p>${omdbData && omdbData.Plot && omdbData.Plot !== "N/A" ? omdbData.Plot : (movie.description_full || 'No description available.')}</p>
           </div>
-          ${imdbData && imdbData.genres ? `
+          ${omdbData && omdbData.Awards && omdbData.Awards !== "N/A" ? `
             <div class="details-section">
-              <h3>IMDb Genres</h3>
-              <div class="details-genres">
-                ${imdbData.genres.map(g => `<span class="genre-badge" style="background: rgba(245, 197, 24, 0.2); border-color: #f5c518;">${g}</span>`).join('')}
-              </div>
+              <h3>Awards</h3>
+              <p style="color: var(--rating-color); font-style: italic;"><i class="fas fa-trophy"></i> ${omdbData.Awards}</p>
+            </div>
+          ` : ''}
+          ${omdbData && omdbData.Director && omdbData.Director !== "N/A" ? `
+            <div class="details-section">
+              <h3>Director</h3>
+              <p>${omdbData.Director}</p>
             </div>
           ` : ''}
           ${movie.cast ? `
