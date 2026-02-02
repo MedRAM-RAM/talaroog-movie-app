@@ -1,13 +1,13 @@
-// ثوابت التطبيق
-const API_BASE_URL = 'https://yts.bz/api/v2/';
-const DEFAULT_LIMIT = 20;
+/**
+ * TALAROOG - Movie Search & Download Application
+ * JavaScript Logic
+ */
 
-// متغيرات عامة
+// متغيرات الحالة العامة
 let currentPage = 1;
-let totalMovies = 0;
-let totalPages = 0;
-let currentMovies = [];
-let currentSortValue = 'date_added';
+let totalPages = 1;
+let currentSearchQuery = '';
+let currentSortBy = 'date_added';
 let currentSortDirection = 'desc';
 let currentGenreValue = '';
 let currentRatingValue = '0';
@@ -66,162 +66,125 @@ function checkForSharedData() {
  * تسجيل مستمعي الأحداث للعناصر التفاعلية
  */
 function registerEventListeners() {
-  // نموذج البحث
-  const searchForm = document.getElementById('search-form');
-  if (searchForm) {
-    searchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const searchInput = document.getElementById('search-input');
-      const query = searchInput.value.trim();
-      if (query) {
+  // البحث
+  const searchInput = document.getElementById('search-input');
+  const searchButton = document.getElementById('search-button');
+  const clearSearch = document.getElementById('clear-search');
+
+  if (searchButton) {
+    searchButton.addEventListener('click', () => {
+      currentSearchQuery = searchInput.value.trim();
+      currentPage = 1;
+      loadMovies();
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        currentSearchQuery = searchInput.value.trim();
         currentPage = 1;
-        loadMovies({ query });
+        loadMovies();
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      if (clearSearch) {
+        clearSearch.style.display = searchInput.value ? 'block' : 'none';
       }
     });
   }
-  
-  const searchInput = document.getElementById("search-input");
-  const clearSearchButton = document.getElementById("clear-search-button");
 
-  if (searchInput && clearSearchButton) {
-    searchInput.addEventListener("input", () => {
-      clearSearchButton.style.display = searchInput.value.length > 0 ? "block" : "none";
-    });
-
-    clearSearchButton.addEventListener("click", () => {
-      searchInput.value = "";
-      clearSearchButton.style.display = "none";
-      searchInput.focus();
-    });
-
-    searchInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const query = searchInput.value.trim();
-        if (query) {
-          currentPage = 1;
-          loadMovies({ query });
-        }
-      }
+  if (clearSearch) {
+    clearSearch.addEventListener('click', () => {
+      searchInput.value = '';
+      clearSearch.style.display = 'none';
+      currentSearchQuery = '';
+      currentPage = 1;
+      loadMovies();
     });
   }
-  
-  // زر الفرز
+
+  // الفرز
   const sortButton = document.getElementById('sort-button');
-  const sortDropdownContent = document.getElementById('sort-dropdown-content');
+  const sortDropdown = document.getElementById('sort-dropdown');
   
-  if (sortButton && sortDropdownContent) {
+  if (sortButton && sortDropdown) {
     sortButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      sortDropdownContent.classList.toggle('active');
+      sortDropdown.classList.toggle('active');
     });
-    
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.sort-dropdown') && sortDropdownContent.classList.contains('active')) {
-        sortDropdownContent.classList.remove('active');
-      }
+
+    document.addEventListener('click', () => {
+      sortDropdown.classList.remove('active');
+    });
+
+    sortDropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
   }
-  
+
   // خيارات الفرز
   const sortOptions = document.querySelectorAll('.sort-option');
   sortOptions.forEach(option => {
     option.addEventListener('click', () => {
-      sortOptions.forEach(opt => opt.classList.remove('active'));
-      option.classList.add('active');
-      
-      currentSortValue = option.dataset.value;
-      const sortFilterInput = document.getElementById('sort-filter');
-      if (sortFilterInput) sortFilterInput.value = currentSortValue;
-      
-      currentPage = 1;
-      loadMovies();
-      if (sortDropdownContent) sortDropdownContent.classList.remove('active');
+      const sortBy = option.dataset.sort;
+      if (sortBy) {
+        currentSortBy = sortBy;
+        sortOptions.forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        currentPage = 1;
+        loadMovies();
+        if (sortDropdown) sortDropdown.classList.remove('active');
+      }
     });
   });
-  
-  // خيارات التصنيف
+
+  // التصنيفات
   const genreTags = document.querySelectorAll('.genre-tag');
   genreTags.forEach(tag => {
     tag.addEventListener('click', () => {
+      const genre = tag.dataset.genre;
+      currentGenreValue = genre === 'all' ? '' : genre;
       genreTags.forEach(t => t.classList.remove('active'));
       tag.classList.add('active');
-      
-      currentGenreValue = tag.dataset.value;
-      const genreFilterInput = document.getElementById('genre-filter');
-      if (genreFilterInput) genreFilterInput.value = currentGenreValue;
-      
       currentPage = 1;
       loadMovies();
     });
-  });
-  
-  // اتجاه الفرز
-  const sortDirectionRadios = document.querySelectorAll('input[name="sort-direction"]');
-  sortDirectionRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
-      currentSortDirection = radio.value;
-      const orderFilterInput = document.getElementById('order-filter');
-      if (orderFilterInput) orderFilterInput.value = currentSortDirection;
-      
-      currentPage = 1;
-      loadMovies();
-    });
-  });
-  
-  // إغلاق نافذة تفاصيل الفيلم عند الضغط على Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeMovieDetails();
-      if (sortDropdownContent && sortDropdownContent.classList.contains('active')) {
-        sortDropdownContent.classList.remove('active');
-      }
-    }
   });
 }
 
 /**
- * تحميل الأفلام من API
+ * جلب الأفلام من الـ API وعرضها
  */
 async function loadMovies(options = {}) {
   showLoading(true);
   
+  const query = options.query !== undefined ? options.query : currentSearchQuery;
+  const page = options.page || currentPage;
+  const sortBy = currentSortBy;
+  const genre = currentGenreValue;
+  
+  let url = `https://yts.bz/api/v2/list_movies.json?limit=20&page=${page}&sort_by=${sortBy}&order_by=${currentSortDirection}`;
+  
+  if (query) url += `&query_term=${encodeURIComponent(query)}`;
+  if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+  if (currentRatingValue !== '0') url += `&minimum_rating=${currentRatingValue}`;
+
   try {
-    const genreFilter = document.getElementById('genre-filter')?.value || currentGenreValue;
-    const ratingFilter = document.getElementById('rating-filter')?.value || currentRatingValue;
-    const sortFilter = document.getElementById('sort-filter')?.value || currentSortValue;
-    const orderFilter = document.getElementById('order-filter')?.value || currentSortDirection;
-    
-    const params = new URLSearchParams({
-      limit: DEFAULT_LIMIT,
-      page: currentPage,
-      sort_by: sortFilter,
-      order_by: orderFilter,
-      minimum_rating: ratingFilter
-    });
-    
-    if (genreFilter) params.append('genre', genreFilter);
-    if (options.query) params.append('query_term', options.query);
-    
-    const response = await fetch(`${API_BASE_URL}list_movies.json?${params.toString()}`);
+    const response = await fetch(url);
     const data = await response.json();
     
-    if (data.status === 'ok' && data.data.movies) {
-      currentMovies = data.data.movies;
-      totalMovies = data.data.movie_count;
-      totalPages = Math.ceil(totalMovies / DEFAULT_LIMIT);
-      
-      renderMovies(currentMovies);
+    if (data.status === 'ok' && data.data.movie_count > 0) {
+      totalPages = Math.ceil(data.data.movie_count / 20);
+      displayMovies(data.data.movies);
       renderPagination();
     } else {
-      renderMovies([]);
-      renderPagination();
-      if (options.query) showNotification('error', 'No movies found.');
+      displayNoResults();
     }
   } catch (error) {
     console.error('Error loading movies:', error);
-    showNotification('error', 'Failed to load movies.');
-    renderMovies([]);
+    showNotification('error', 'Failed to load movies. Please try again.');
   } finally {
     showLoading(false);
   }
@@ -230,65 +193,78 @@ async function loadMovies(options = {}) {
 /**
  * عرض الأفلام في الشبكة
  */
-function renderMovies(movies) {
+function displayMovies(movies) {
   const moviesGrid = document.getElementById('movies-grid');
   if (!moviesGrid) return;
-  moviesGrid.innerHTML = '';
   
-  if (!movies || movies.length === 0) {
-    moviesGrid.innerHTML = '<div class="no-results">No movies found matching your criteria.</div>';
-    return;
-  }
-  
-  movies.forEach(movie => {
-    const card = createMovieCard(movie);
-    moviesGrid.appendChild(card);
-  });
+  moviesGrid.innerHTML = movies.map(movie => `
+    <div class="movie-card" data-id="${movie.id}">
+      <div class="movie-poster">
+        <img src="${movie.medium_cover_image || createDefaultPosterImage()}" alt="${movie.title}" loading="lazy">
+        <div class="movie-rating">
+          <i class="fas fa-star"></i> ${movie.rating}
+        </div>
+        <div class="poster-buttons">
+          <button class="poster-button details-button" onclick="openMovieDetails(${movie.id})">
+            <i class="fas fa-info-circle"></i> Details
+          </button>
+          <button class="poster-button download-button" onclick="openMovieDetails(${movie.id})">
+            <i class="fas fa-download"></i> Download
+          </button>
+        </div>
+      </div>
+      <div class="movie-info">
+        <h3 class="movie-title">${movie.title}</h3>
+        <p class="movie-year">${movie.year}</p>
+      </div>
+    </div>
+  `).join('');
 }
 
 /**
- * إنشاء بطاقة فيلم
+ * عرض رسالة عند عدم وجود نتائج
  */
-function createMovieCard(movie) {
-  const card = document.createElement('div');
-  card.className = 'movie-card';
-  
-  card.innerHTML = `
-    <div class="movie-poster">
-      <img src="${movie.medium_cover_image || createDefaultPosterImage()}" alt="${movie.title}" loading="lazy" onerror="this.src='${createDefaultPosterImage()}'">
-      <div class="movie-rating"><i class="fas fa-star"></i> ${movie.rating || '0.0'}</div>
-      <div class="poster-buttons">
-        <button class="poster-button details-button"><i class="fas fa-info-circle"></i> Details</button>
-        <button class="poster-button download-button"><i class="fas fa-download"></i> Download</button>
+function displayNoResults() {
+  const moviesGrid = document.getElementById('movies-grid');
+  const pagination = document.getElementById('pagination');
+  if (moviesGrid) {
+    moviesGrid.innerHTML = `
+      <div class="no-results">
+        <i class="fas fa-search"></i>
+        <p>No movies found matching your search.</p>
       </div>
-    </div>
-    <div class="movie-info">
-      <h3 class="movie-title">${movie.title}</h3>
-      <div class="movie-year">${movie.year}</div>
-    </div>
-  `;
-  
-  card.querySelector('.details-button').addEventListener('click', () => openMovieDetails(movie.id));
-  card.querySelector('.download-button').addEventListener('click', () => openMovieDetails(movie.id, true));
-  
-  return card;
+    `;
+  }
+  if (pagination) pagination.innerHTML = '';
 }
 
 /**
  * فتح تفاصيل الفيلم
  */
-async function openMovieDetails(movieId, showDownloadOnly = false) {
+async function openMovieDetails(movieId) {
   const movieDetailsElement = document.getElementById('movie-details');
-  if (!movieDetailsElement) return;
-
-  movieDetailsElement.innerHTML = `<div class="loading"><div class="loading-spinner"></div></div>`;
+  movieDetailsElement.innerHTML = `<button class="close-details">&times;</button><div class="loading-details"><div class="spinner"></div></div>`;
   movieDetailsElement.classList.add('active');
   document.body.style.overflow = 'hidden';
-  
+
   try {
-    const response = await fetch(`${API_BASE_URL}movie_details.json?movie_id=${movieId}&with_images=true&with_cast=true`);
+    const response = await fetch(`https://yts.bz/api/v2/movie_details.json?movie_id=${movieId}&with_images=true&with_cast=true`);
     const data = await response.json();
     const movie = data.data.movie;
+    
+    // جلب بيانات إضافية من imdbapi.dev إذا توفر معرف IMDb
+    let imdbData = null;
+    if (movie.imdb_code) {
+      try {
+        const imdbResponse = await fetch(`https://api.imdbapi.dev/titles/${movie.imdb_code}`);
+        if (imdbResponse.ok) {
+          imdbData = await imdbResponse.json();
+          console.log('IMDb Data fetched:', imdbData);
+        }
+      } catch (e) {
+        console.error('Failed to fetch from imdbapi.dev:', e);
+      }
+    }
     
     let html = `<button class="close-details">&times;</button><div class="details-container">`;
     
@@ -304,6 +280,7 @@ async function openMovieDetails(movieId, showDownloadOnly = false) {
               <span><i class="far fa-calendar-alt"></i> ${movie.year}</span>
               <span><i class="far fa-clock"></i> ${movie.runtime} min</span>
               <span><i class="fas fa-star"></i> ${movie.rating}/10</span>
+              ${imdbData && imdbData.rating ? `<span><i class="fab fa-imdb" style="color: #f5c518;"></i> ${imdbData.rating.aggregateRating}/10 (${imdbData.rating.voteCount.toLocaleString()} votes)</span>` : ''}
             </div>
             <div class="details-genres">
               ${movie.genres ? movie.genres.map(g => `<span class="genre-badge">${g}</span>`).join('') : ''}
@@ -318,8 +295,16 @@ async function openMovieDetails(movieId, showDownloadOnly = false) {
         <div class="details-main">
           <div class="details-section">
             <h3>Storyline</h3>
-            <p>${movie.description_full || 'No description available.'}</p>
+            <p>${imdbData && imdbData.plot ? imdbData.plot : (movie.description_full || 'No description available.')}</p>
           </div>
+          ${imdbData && imdbData.genres ? `
+            <div class="details-section">
+              <h3>IMDb Genres</h3>
+              <div class="details-genres">
+                ${imdbData.genres.map(g => `<span class="genre-badge" style="background: rgba(245, 197, 24, 0.2); border-color: #f5c518;">${g}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
           ${movie.cast ? `
             <div class="details-section">
               <h3>Cast</h3>
