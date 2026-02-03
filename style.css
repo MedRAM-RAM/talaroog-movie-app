@@ -1,4 +1,4 @@
-/* متغيرات الألوان والخطوط - العودة للتصميم الأصلي */
+/* متغيرات الألوان والخطوط */
 :root {
   --primary-color: #8A2BE2; /* بنفسجي */
   --secondary-color: #2980b9; /* أزرق */
@@ -11,7 +11,7 @@
   --bg-color: #121212;
   --card-bg: #1e1e1e;
   --font-primary: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --transition: all 0.3s ease;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* إعادة ضبط الستايل */
@@ -84,22 +84,24 @@ header {
   text-shadow: 0 2px 8px rgba(138, 43, 226, 0.5);
 }
 
-/* تنسيق حاوية البحث - LTR كما طلب المستخدم */
+/* تنسيق حاوية البحث */
 .search-container {
   display: flex;
   flex: 1;
   max-width: 550px;
   align-items: center;
+  direction: ltr; /* LTR for English search */
 }
 
 .search-bar {
   display: flex;
   flex: 1;
   background-color: #333;
-  border-radius: 25px; /* More modern rounded look */
+  border-radius: 25px;
   overflow: hidden;
   border: 1px solid #444;
   transition: var(--transition);
+  position: relative;
 }
 
 .search-bar:focus-within {
@@ -114,7 +116,7 @@ header {
 
 .search-bar input {
   width: 100%;
-  padding: 10px 15px;
+  padding: 10px 40px 10px 15px;
   border: none;
   background-color: transparent;
   color: var(--text-color);
@@ -299,6 +301,7 @@ header {
   transition: var(--transition);
   position: relative;
   border: 1px solid #2a2a2a;
+  cursor: pointer;
 }
 
 .movie-card:hover {
@@ -320,10 +323,6 @@ header {
   transition: var(--transition);
 }
 
-.movie-card:hover .movie-poster img {
-  transform: scale(1.05);
-}
-
 .movie-rating {
   position: absolute;
   top: 10px;
@@ -341,52 +340,42 @@ header {
   backdrop-filter: blur(4px);
 }
 
-.poster-buttons {
+/* نظام الضغط المزدوج للأزرار */
+.poster-buttons-overlay {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 15px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-  opacity: 0;
-  transition: var(--transition);
-  z-index: 2;
-}
-
-.movie-card:hover .poster-buttons {
-  opacity: 1;
-}
-
-.poster-button {
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: bold;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  opacity: 0;
+  visibility: hidden;
   transition: var(--transition);
+  z-index: 3;
 }
 
-.details-button {
-  background-color: var(--dark-blue);
-  color: white;
+.movie-card.card-active .poster-buttons-overlay {
+  opacity: 1;
+  visibility: visible;
 }
 
-.details-button:hover {
-  background-color: #283593;
-}
-
-.download-button {
+.action-btn-merged {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
   background-color: var(--primary-color);
   color: white;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.6);
+  transition: var(--transition);
+  border: 2px solid var(--rating-color);
 }
 
-.download-button:hover {
+.action-btn-merged:hover {
+  transform: scale(1.1);
   background-color: var(--light-purple);
 }
 
@@ -518,10 +507,6 @@ header {
   transform: translateY(-2px);
 }
 
-.imdb-link-btn i {
-  font-size: 1.2rem;
-}
-
 .cast-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -567,70 +552,27 @@ header {
 .details-content {
   padding: 30px;
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 40px;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+}
+
+.details-section {
+  margin-bottom: 25px;
 }
 
 .details-section h3 {
-  color: var(--rating-color);
-  margin-bottom: 15px;
+  color: var(--primary-color);
+  margin-bottom: 12px;
   font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.details-section h3::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #333;
-}
-
-.cast-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 15px;
-}
-
-.cast-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #252525;
-  padding: 8px;
-  border-radius: 10px;
-  transition: var(--transition);
-}
-
-.cast-item:hover {
-  background: #333;
-}
-
-.cast-photo {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #444;
-}
-
-.cast-info p {
-  font-size: 0.85rem;
-  font-weight: bold;
-  margin: 0;
-}
-
-.cast-info span {
-  font-size: 0.75rem;
-  color: #888;
+  border-bottom: 1px solid #333;
+  padding-bottom: 5px;
 }
 
 .download-card {
-  background: #252525;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  background-color: #222;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -638,215 +580,123 @@ header {
 }
 
 .quality-tag {
-  background: var(--primary-color);
-  color: white;
-  padding: 3px 8px;
+  background-color: var(--dark-blue);
+  padding: 2px 8px;
   border-radius: 4px;
-  font-weight: bold;
   font-size: 0.8rem;
+  font-weight: bold;
 }
 
 .magnet-btn {
-  background: #27ae60;
+  background-color: var(--primary-color);
   color: white;
-  padding: 8px 15px;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: var(--transition);
-}
-
-.magnet-btn:hover {
-  background: #2ecc71;
-  transform: scale(1.05);
+  gap: 5px;
 }
 
 .close-details {
   position: absolute;
   top: 20px;
   right: 20px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  font-size: 2rem;
   width: 40px;
   height: 40px;
-  background: rgba(0,0,0,0.5);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  color: white;
-  z-index: 1001;
-  transition: var(--transition);
+  z-index: 10;
 }
 
-.close-details:hover {
-  background: var(--error-color);
-  transform: rotate(90deg);
-}
-
-/* التنقل بين الصفحات */
-.pagination {
-  display: flex;
+/* التحميل والرسائل */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 40px 0;
+  z-index: 2000;
 }
 
-.pagination button {
-  min-width: 40px;
-  height: 40px;
-  padding: 0 10px;
-  background-color: #252525;
-  color: white;
-  border-radius: 8px;
-  font-weight: bold;
-  transition: var(--transition);
-  border: 1px solid #333;
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #333;
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.pagination button:hover:not(:disabled) {
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
   background-color: #333;
-  border-color: var(--primary-color);
+  padding: 12px 25px;
+  border-radius: 30px;
+  z-index: 3000;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
-.pagination button.active {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-  box-shadow: 0 4px 10px rgba(138, 43, 226, 0.3);
+.notification.active {
+  transform: translateX(-50%) translateY(0);
 }
 
-/* الفوتر */
-footer {
-  background-color: #111;
-  padding: 40px 0;
-  text-align: center;
-  border-top: 1px solid #222;
-}
+.notification.error { border-left: 4px solid var(--error-color); }
 
-.footer-logo {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: var(--rating-color);
-  margin-bottom: 15px;
-}
-
-.footer-text {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-/* استجابة التصميم للهواتف */
+/* التجاوب مع الهواتف */
 @media (max-width: 768px) {
+  .movies-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
   .header-content {
     flex-direction: column;
     text-align: center;
   }
   
   .search-container {
+    max-width: 100%;
     width: 100%;
-    margin: 0;
-  }
-  
-  .filter-sort-container {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .sort-dropdown {
-    width: 100%;
-  }
-  
-  #sort-button {
-    width: 100%;
-    border-radius: 25px;
-  }
-  
-  .genres-container {
-    justify-content: flex-start;
-    padding-bottom: 10px;
-  }
-
-  /* عرض فيلمين في الصف الواحد على الهواتف */
-  .movies-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 0 5px;
-  }
-  
-  .movie-poster {
-    height: auto;
-  }
-  
-  .movie-title {
-    font-size: 0.85rem;
-  }
-  
-  .poster-buttons {
-    padding: 8px;
-    gap: 5px;
-  }
-  
-  .poster-button {
-    padding: 6px;
-    font-size: 0.75rem;
-  }
-
-  /* تفاصيل الفيلم على الهاتف */
-  .details-container {
-    margin: 0;
-    border-radius: 0;
   }
   
   .details-header {
     height: auto;
-    min-height: 300px;
+    padding-top: 50px;
   }
   
   .details-header-content {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 20px;
-  }
-  
-  .details-poster {
-    width: 140px;
-  }
-  
-  .details-title h1 {
-    font-size: 1.6rem;
   }
   
   .details-content {
     grid-template-columns: 1fr;
-    padding: 20px;
-    gap: 25px;
   }
   
-  .cast-list {
-    grid-template-columns: 1fr;
+  .details-poster {
+    width: 150px;
   }
-}
-
-/* حالة التحميل */
-.loading {
-  display: flex;
-  justify-content: center;
-  padding: 50px 0;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(138, 43, 226, 0.1);
-  border-top: 3px solid var(--primary-color);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  
+  .details-title h1 {
+    font-size: 1.5rem;
+  }
 }

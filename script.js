@@ -21,20 +21,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const sharedQuery = checkForSharedData();
   
   if (sharedQuery) {
-    // إذا وجدنا معرف IMDb أو نص بحث، نقوم بالبحث عنه مباشرة
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = sharedQuery;
     loadMovies({ query: sharedQuery });
     
-    // تنظيف الـ URL من باراميترات المشاركة
     const newUrl = window.location.origin + window.location.pathname;
     window.history.replaceState({}, document.title, newUrl);
   } else {
-    // تحميل الأفلام الافتراضية إذا لم يكن هناك بحث
     loadMovies();
   }
 
-  // تسجيل Service Worker لدعم PWA
   registerServiceWorker();
 });
 
@@ -51,14 +47,9 @@ function checkForSharedData() {
   
   if (!combinedData) return null;
   
-  // محاولة استخراج IMDb ID (tt followed by at least 7 digits)
   const imdbMatch = combinedData.match(/tt\d{7,}/);
-  if (imdbMatch) {
-    console.log('Found IMDb ID in shared data:', imdbMatch[0]);
-    return imdbMatch[0];
-  }
+  if (imdbMatch) return imdbMatch[0];
   
-  // إذا لم نجد IMDb ID، نستخدم النص المتوفر كبحث عام
   return title || text || url;
 }
 
@@ -66,7 +57,6 @@ function checkForSharedData() {
  * تسجيل مستمعي الأحداث للعناصر التفاعلية
  */
 function registerEventListeners() {
-  // البحث
   const searchInput = document.getElementById('search-input');
   const searchButton = document.getElementById('search-button');
   const clearSearch = document.getElementById('clear-search');
@@ -105,7 +95,6 @@ function registerEventListeners() {
     });
   }
 
-  // الفرز
   const sortButton = document.getElementById('sort-button');
   const sortDropdown = document.getElementById('sort-dropdown');
   
@@ -118,13 +107,8 @@ function registerEventListeners() {
     document.addEventListener('click', () => {
       sortDropdown.classList.remove('active');
     });
-
-    sortDropdown.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
   }
 
-  // خيارات الفرز
   const sortOptions = document.querySelectorAll('.sort-option');
   sortOptions.forEach(option => {
     option.addEventListener('click', () => {
@@ -140,7 +124,6 @@ function registerEventListeners() {
     });
   });
 
-  // التصنيفات
   const genreTags = document.querySelectorAll('.genre-tag');
   genreTags.forEach(tag => {
     tag.addEventListener('click', () => {
@@ -177,39 +160,51 @@ async function loadMovies(options = {}) {
     
     if (data.status === 'ok' && data.data.movie_count > 0) {
       totalPages = Math.ceil(data.data.movie_count / 20);
-      displayMovies(data.data.movies);
+      await displayMovies(data.data.movies);
       renderPagination();
     } else {
       displayNoResults();
     }
   } catch (error) {
     console.error('Error loading movies:', error);
-    showNotification('error', 'Failed to load movies. Please try again.');
+    showNotification('error', 'Failed to load movies.');
   } finally {
     showLoading(false);
   }
 }
 
 /**
- * عرض الأفلام في الشبكة
+ * عرض الأفلام في الشبكة مع جلب تقييم IMDb لكل فيلم
  */
-function displayMovies(movies) {
+async function displayMovies(movies) {
   const moviesGrid = document.getElementById('movies-grid');
   if (!moviesGrid) return;
   
-  moviesGrid.innerHTML = movies.map(movie => `
-    <div class="movie-card" data-id="${movie.id}">
+  // جلب تقييمات IMDb بشكل متوازي لسرعة العرض
+  const moviesWithImdb = await Promise.all(movies.map(async (movie) => {
+    let imdbRating = movie.rating; // القيمة الافتراضية
+    if (movie.imdb_code) {
+      try {
+        const omdbRes = await fetch(`https://www.omdbapi.com/?i=${movie.imdb_code}&apikey=9b8d2c00`);
+        const omdbData = await omdbRes.json();
+        if (omdbData.Response === "True" && omdbData.imdbRating !== "N/A") {
+          imdbRating = omdbData.imdbRating;
+        }
+      } catch (e) { console.error('OMDb fetch error:', e); }
+    }
+    return { ...movie, imdbRating };
+  }));
+
+  moviesGrid.innerHTML = moviesWithImdb.map(movie => `
+    <div class="movie-card" data-id="${movie.id}" onclick="handleCardClick(this, ${movie.id})">
       <div class="movie-poster">
         <img src="${movie.medium_cover_image || createDefaultPosterImage()}" alt="${movie.title}" loading="lazy">
         <div class="movie-rating">
-          <i class="fas fa-star"></i> ${movie.rating}
+          <i class="fab fa-imdb" style="color: #f5c518;"></i> ${movie.imdbRating}
         </div>
-        <div class="poster-buttons">
-          <button class="poster-button details-button" onclick="openMovieDetails(${movie.id})">
-            <i class="fas fa-info-circle"></i> Details
-          </button>
-          <button class="poster-button download-button" onclick="openMovieDetails(${movie.id})">
-            <i class="fas fa-download"></i> Download
+        <div class="poster-buttons-overlay">
+          <button class="action-btn-merged">
+            <i class="fas fa-play-circle"></i>
           </button>
         </div>
       </div>
@@ -219,6 +214,27 @@ function displayMovies(movies) {
       </div>
     </div>
   `).join('');
+}
+
+/**
+ * معالجة الضغط على بطاقة الفيلم (نظام الضغط المزدوج)
+ */
+function handleCardClick(cardElement, movieId) {
+  // إذا كانت البطاقة نشطة بالفعل (الضغطة الثانية)
+  if (cardElement.classList.contains('card-active')) {
+    openMovieDetails(movieId);
+    cardElement.classList.remove('card-active');
+  } else {
+    // الضغطة الأولى: تفعيل البطاقة وإظهار الزر
+    // إزالة الحالة النشطة من جميع البطاقات الأخرى أولاً
+    document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('card-active'));
+    cardElement.classList.add('card-active');
+    
+    // إغلاق الحالة النشطة تلقائياً بعد 3 ثوانٍ إذا لم يتم الضغط مرة أخرى
+    setTimeout(() => {
+      cardElement.classList.remove('card-active');
+    }, 3000);
+  }
 }
 
 /**
@@ -252,7 +268,6 @@ async function openMovieDetails(movieId) {
     const data = await response.json();
     const movie = data.data.movie;
     
-    // جلب بيانات إضافية من OMDb API إذا توفر معرف IMDb
     let omdbData = null;
     if (movie.imdb_code) {
       try {
@@ -260,16 +275,12 @@ async function openMovieDetails(movieId) {
         if (omdbResponse.ok) {
           omdbData = await omdbResponse.json();
           if (omdbData.Response === "False") omdbData = null;
-          console.log('OMDb Data fetched:', omdbData);
         }
-      } catch (e) {
-        console.error('Failed to fetch from OMDb API:', e);
-      }
+      } catch (e) { console.error('OMDb API error:', e); }
     }
     
     let html = `<button class="close-details">&times;</button><div class="details-container">`;
     
-    // Header with Backdrop
     html += `
       <div class="details-header">
         <img class="details-backdrop" src="${movie.background_image_original || movie.large_cover_image}" alt="backdrop">
@@ -281,8 +292,7 @@ async function openMovieDetails(movieId) {
               <span><i class="far fa-calendar-alt"></i> ${movie.year}</span>
               <span><i class="far fa-clock"></i> ${movie.runtime} min</span>
               <span><i class="fas fa-star"></i> ${movie.rating}/10</span>
-              ${omdbData && omdbData.imdbRating ? `<span><i class="fab fa-imdb" style="color: #f5c518;"></i> ${omdbData.imdbRating}/10 (${omdbData.imdbVotes} votes)</span>` : ''}
-              ${omdbData && omdbData.Metascore && omdbData.Metascore !== "N/A" ? `<span><i class="fas fa-chart-line" style="color: #66cc33;"></i> Metascore: ${omdbData.Metascore}</span>` : ''}
+              ${omdbData && omdbData.imdbRating ? `<span><i class="fab fa-imdb" style="color: #f5c518;"></i> ${omdbData.imdbRating}/10</span>` : ''}
             </div>
             <div class="details-genres">
               ${movie.genres ? movie.genres.map(g => `<span class="genre-badge">${g}</span>`).join('') : ''}
@@ -303,12 +313,6 @@ async function openMovieDetails(movieId) {
             <div class="details-section">
               <h3>Awards</h3>
               <p style="color: var(--rating-color); font-style: italic;"><i class="fas fa-trophy"></i> ${omdbData.Awards}</p>
-            </div>
-          ` : ''}
-          ${omdbData && omdbData.Director && omdbData.Director !== "N/A" ? `
-            <div class="details-section">
-              <h3>Director</h3>
-              <p>${omdbData.Director}</p>
             </div>
           ` : ''}
           ${movie.cast ? `
@@ -360,12 +364,9 @@ function renderPagination() {
   const el = document.getElementById('pagination');
   if (!el) return;
   el.innerHTML = '';
-  
   if (totalPages <= 1) return;
-  
   const start = Math.max(1, currentPage - 2);
   const end = Math.min(totalPages, start + 4);
-  
   for (let i = start; i <= end; i++) {
     const btn = document.createElement('button');
     btn.textContent = i;
