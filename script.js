@@ -96,7 +96,7 @@ function registerEventListeners() {
   }
 
   const sortButton = document.getElementById('sort-button');
-  const sortDropdown = document.getElementById('sort-dropdown');
+  const sortDropdown = document.getElementById('sort-dropdown-content');
   
   if (sortButton && sortDropdown) {
     sortButton.addEventListener('click', (e) => {
@@ -112,7 +112,7 @@ function registerEventListeners() {
   const sortOptions = document.querySelectorAll('.sort-option');
   sortOptions.forEach(option => {
     option.addEventListener('click', () => {
-      const sortBy = option.dataset.sort;
+      const sortBy = option.dataset.value; // تم التغيير من dataset.sort إلى dataset.value
       if (sortBy) {
         currentSortBy = sortBy;
         sortOptions.forEach(opt => opt.classList.remove('active'));
@@ -127,10 +127,20 @@ function registerEventListeners() {
   const genreTags = document.querySelectorAll('.genre-tag');
   genreTags.forEach(tag => {
     tag.addEventListener('click', () => {
-      const genre = tag.dataset.genre;
-      currentGenreValue = genre === 'all' ? '' : genre;
+      const genre = tag.dataset.value; // تم التغيير من dataset.genre إلى dataset.value
+      currentGenreValue = genre || '';
       genreTags.forEach(t => t.classList.remove('active'));
       tag.classList.add('active');
+      currentPage = 1;
+      loadMovies();
+    });
+  });
+
+  // إضافة مستمع لاتجاه الفرز
+  const sortDirectionInputs = document.querySelectorAll('input[name="sort-direction"]');
+  sortDirectionInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      currentSortDirection = input.value;
       currentPage = 1;
       loadMovies();
     });
